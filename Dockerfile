@@ -9,9 +9,6 @@ RUN apt-get update && apt-get install -y libltdl-dev libgpg-error-dev libidn11-d
 # Default decision to go with sqlite, missing modules with i.e. postgres
 RUN apt-get update && apt-get install -y libpq-dev libsqlite3-dev
 
-# Installing the optional requirements for gnunet-conversation
-RUN apt-get update && apt-get install -y gstreamer1.0 libpulse-dev libopus-dev
-
 # Install gnurl from source at version gnurl-7.54.0
 RUN git clone https://git.taler.net/gnurl.git --branch gnurl-7.54.0
 WORKDIR /gnurl
@@ -45,4 +42,3 @@ RUN echo '[arm]\nSYSTEM_ONLY = YES\nUSER_ONLY = NO\n' > /etc/gnunet.conf
 RUN cat /etc/gnunet.conf
 RUN ldconfig
 USER gnunet
-
