@@ -8,8 +8,8 @@ This will take quite a while and will consume a bit of data.
 docker build -t gnunet .
 ```
 
-## Start it directly from the newly created gnunet image
-Start a container from image `gnunet` which can access /dev/net/tun, has access to the host network and we are going to name it `gnunet_base`.
+## Start it from the newly created gnunet image
+Start a container from `gnunet` image, which can access /dev/net/tun, has access to the host network. We are going to name it `gnunet1`.
 
 Note the `--rm` that will delete the container as soon as you stop it and `-ti` gives you an interactive terminal.
 
