@@ -1,10 +1,6 @@
 FROM ubuntu:16.04
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV GNURL_GIT_URL https://git.taler.net/gnurl.git
-ENV GNURL_GIT_BRANCH gnurl-7.54.0
-ENV GNUNET_GIT_URL https://gnunet.org/git/gnunet
-ENV GNUNET_GIT_BRANCH master
 
 # Install tools and dependencies
 RUN apt-get update && \
@@ -36,6 +32,9 @@ RUN apt-get update && \
       /tmp/*
 
 # Install GNUrl
+ENV GNURL_GIT_URL https://git.taler.net/gnurl.git
+ENV GNURL_GIT_BRANCH gnurl-7.54.0
+
 RUN git clone $GNURL_GIT_URL \
       --branch $GNURL_GIT_BRANCH \
       --depth=1 \
@@ -71,40 +70,39 @@ RUN git clone $GNURL_GIT_URL \
         --disable-ftp \
         --disable-smb && \
       make install && \
-    cd -
-
-# Create GNUnet user and group
-RUN adduser \
-      --system \
-      --home /var/lib/gnunet \
-      --group \
-      --disabled-password \
-      gnunet && \
-    addgroup \
-      --system \
-      gnunetdns
+    cd - && \
+    rm -fr /gnurl
 
 # Install GNUnet
+ENV GNUNET_GIT_URL https://gnunet.org/git/gnunet
+ENV GNUNET_GIT_BRANCH master
+ENV GNUNET_PREFIX /usr/local/gnunet
+ENV CFLAGS '-g -Wall -O0'
+
 RUN git clone $GNUNET_GIT_URL \
       --branch $GNUNET_GIT_BRANCH \
       --depth=1 \
       --quiet && \
     cd /gnunet && \
       ./bootstrap && \
-      ./configure --with-nssdir=/lib && \
-      make && \
+      ./configure \
+        --with-nssdir=/lib \
+        --prefix=$GNUNET_PREFIX \
+        --enable-logging=verbose && \
+      make -j3 && \
       make install && \
       ldconfig && \
-    cd -
+    cd - && \
+    rm -fr /gnunet
 
 # Configure GNUnet
-RUN echo '[arm]\nSYSTEM_ONLY = YES\nUSER_ONLY = NO\n' > /etc/gnunet.conf && \
-    cat /etc/gnunet.conf && \
-    ldconfig
-
+COPY gnunet.conf /etc/gnunet.conf
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod 755 /usr/local/bin/docker-entrypoint
 
-USER gnunet
+ENV LOCAL_PORT_RANGE='40001 40200'
+ENV PATH $GNUNET_PREFIX/bin:$PATH
+
+EXPOSE 2089
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]

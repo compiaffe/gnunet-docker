@@ -13,14 +13,29 @@ Start a container from image `gnunet` which can access /dev/net/tun, has access 
 
 Note the `--rm` that will delete the container as soon as you stop it and `-ti` gives you an interactive terminal.
 
+#### Linux Users
 ```bash
 docker run \
   --rm \
   -ti \
-  -v /dev/net/tun:/dev/net/tun \
   --privileged \
+  --name gnunet1 \
   --net=host \
-  --name gnunet_base \
+  -v /dev/net/tun:/dev/net/tun \
+  gnunet
+```
+
+#### Mac Users
+```bash
+docker run \
+  --rm \
+  -it \
+  --privileged \
+  --name gnunet1 \
+  -p 2086:2086 \
+  -p 2086:2086/udp \
+  -p40001-40200:40001-40200 \
+  -p40001-40200:40001-40200/udp \
   gnunet
 ```
 
@@ -32,7 +47,7 @@ Don't worry about warnings too much...
 Open a new terminal and connect to the container we just started:
 
 ```bash
-docker exec -it gnunet_base_new gnunet-peerinfo -i
+docker exec -it gnunet1 gnunet-peerinfo -i
 ```
 
 If you get a list of peers, all is good.
