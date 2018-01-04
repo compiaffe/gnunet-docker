@@ -33,7 +33,7 @@ RUN apt-get update && \
 
 # Install GNUrl
 ENV GNURL_GIT_URL https://git.taler.net/gnurl.git
-ENV GNURL_GIT_BRANCH gnurl-7.54.0
+ENV GNURL_GIT_BRANCH gnurl-7.57.0
 
 RUN git clone $GNURL_GIT_URL \
       --branch $GNURL_GIT_BRANCH \
@@ -87,7 +87,7 @@ RUN git clone $GNUNET_GIT_URL \
       ./bootstrap && \
       ./configure \
         --with-nssdir=/lib \
-        --prefix=$GNUNET_PREFIX \
+        --prefix="$GNUNET_PREFIX" \
         --enable-logging=verbose && \
       make -j3 && \
       make install && \
@@ -101,8 +101,6 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod 755 /usr/local/bin/docker-entrypoint
 
 ENV LOCAL_PORT_RANGE='40001 40200'
-ENV PATH $GNUNET_PREFIX/bin:$PATH
+ENV PATH "$GNUNET_PREFIX/bin:/usr/local/bin:$PATH"
 
-EXPOSE 2089
-
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]
+ENTRYPOINT ["docker-entrypoint"]
