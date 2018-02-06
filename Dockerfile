@@ -1,44 +1,106 @@
-from ubuntu:16.04
+FROM ubuntu:16.04
 
-# Install the required build tools
-RUN apt-get update && apt-get install -y git automake autopoint autoconf
+ENV DEBIAN_FRONTEND noninteractive
 
-# Install the required dependencies and libgcrypt
-RUN apt-get update && apt-get install -y libltdl-dev libgpg-error-dev libidn11-dev libunistring-dev libglpk-dev libbluetooth-dev libextractor-dev libmicrohttpd-dev libgnutls28-dev libgcrypt20-dev
+# Install tools and dependencies
+RUN apt-get update && \
+    apt-get -y install --no-install-recommends \
+      ca-certificates \
+      libsasl2-modules \
+      git \
+      automake \
+      autopoint \
+      autoconf \
+      texinfo \
+      libtool \
+      libltdl-dev \
+      libgpg-error-dev \
+      libidn11-dev \
+      libunistring-dev \
+      libglpk-dev \
+      libbluetooth-dev \
+      libextractor-dev \
+      libmicrohttpd-dev \
+      libgnutls28-dev \
+      libgcrypt20-dev \
+      libpq-dev \
+      libsqlite3-dev && \
+    apt-get clean all && \
+    apt-get -y autoremove && \
+    rm -rf \
+      /var/lib/apt/lists/* \
+      /tmp/*
 
-# Default decision to go with sqlite, missing modules with i.e. postgres
-RUN apt-get update && apt-get install -y libpq-dev libsqlite3-dev
+# Install GNUrl
+ENV GNURL_GIT_URL https://git.taler.net/gnurl.git
+ENV GNURL_GIT_BRANCH gnurl-7.57.0
 
-# Install gnurl from source at version gnurl-7.54.0
-RUN git clone https://git.taler.net/gnurl.git --branch gnurl-7.54.0
-WORKDIR /gnurl
-RUN autoreconf -i
-RUN ./configure --enable-ipv6 --with-gnutls --without-libssh2 \
---without-libmetalink --without-winidn --without-librtmp \
---without-nghttp2 --without-nss --without-cyassl \
---without-polarssl --without-ssl --without-winssl \
---without-darwinssl --disable-sspi --disable-ntlm-wb --disable-ldap \
---disable-rtsp --disable-dict --disable-telnet --disable-tftp \
---disable-pop3 --disable-imap --disable-smtp --disable-gopher \
---disable-file --disable-ftp --disable-smb
-RUN make install
-WORKDIR /
-
-# Create gnunet user and group
-RUN adduser --system --home /var/lib/gnunet --group --disabled-password gnunet
-RUN addgroup --system gnunetdns
+RUN git clone $GNURL_GIT_URL \
+      --branch $GNURL_GIT_BRANCH \
+      --depth=1 \
+      --quiet && \
+    cd /gnurl && \
+      autoreconf -i && \
+      ./configure \
+        --enable-ipv6 \
+        --with-gnutls \
+        --without-libssh2 \
+        --without-libmetalink \
+        --without-winidn \
+        --without-librtmp \
+        --without-nghttp2 \
+        --without-nss \
+        --without-cyassl \
+        --without-polarssl \
+        --without-ssl \
+        --without-winssl \
+        --without-darwinssl \
+        --disable-sspi \
+        --disable-ntlm-wb \
+        --disable-ldap \
+        --disable-rtsp \
+        --disable-dict \
+        --disable-telnet \
+        --disable-tftp \
+        --disable-pop3 \
+        --disable-imap \
+        --disable-smtp \
+        --disable-gopher \
+        --disable-file \
+        --disable-ftp \
+        --disable-smb && \
+      make install && \
+    cd - && \
+    rm -fr /gnurl
 
 # Install GNUnet
-RUN git clone https://gnunet.org/git/gnunet
-WORKDIR /gnunet
-RUN ./bootstrap
-RUN ./configure --with-nssdir=/lib
-RUN make
-RUN make install
-RUN ldconfig
+ENV GNUNET_GIT_URL https://gnunet.org/git/gnunet
+ENV GNUNET_GIT_BRANCH master
+ENV GNUNET_PREFIX /usr/local/gnunet
+ENV CFLAGS '-g -Wall -O0'
 
+RUN git clone $GNUNET_GIT_URL \
+      --branch $GNUNET_GIT_BRANCH \
+      --depth=1 \
+      --quiet && \
+    cd /gnunet && \
+      ./bootstrap && \
+      ./configure \
+        --with-nssdir=/lib \
+        --prefix="$GNUNET_PREFIX" \
+        --enable-logging=verbose && \
+      make -j3 && \
+      make install && \
+      ldconfig && \
+    cd - && \
+    rm -fr /gnunet
 
-RUN echo '[arm]\nSYSTEM_ONLY = YES\nUSER_ONLY = NO\n' > /etc/gnunet.conf
-RUN cat /etc/gnunet.conf
-RUN ldconfig
-USER gnunet
+# Configure GNUnet
+COPY gnunet.conf /etc/gnunet.conf
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+RUN chmod 755 /usr/local/bin/docker-entrypoint
+
+ENV LOCAL_PORT_RANGE='40001 40200'
+ENV PATH "$GNUNET_PREFIX/bin:/usr/local/bin:$PATH"
+
+ENTRYPOINT ["docker-entrypoint"]
